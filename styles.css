@@ -561,3 +561,254 @@
     flex: 0 0 118px;
   }
 }
+
+
+/* MOBILE-ONLY PATCH — desktop layout intentionally unchanged */
+@media (max-width: 760px) {
+  /* Keep the location status in the blank header space between logo and menu. */
+  .site-header {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .site-header .header-location {
+    display: flex !important;
+    position: absolute;
+    left: 136px;
+    right: 48px;
+    top: 50%;
+    transform: translateY(-50%);
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+    color: #34473a;
+    font-size: 8.5px;
+    line-height: 1.15;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .site-header .header-location svg {
+    flex: 0 0 13px;
+    width: 13px;
+    height: 13px;
+    stroke: #d96c2f;
+    fill: none;
+    stroke-width: 2;
+  }
+
+  .site-header .header-location span {
+    display: block;
+  }
+
+  .site-header .header-location strong {
+    color: #102116;
+    font-weight: 800;
+  }
+
+  /* Remove the extra location row from the hero; the status is in the header. */
+  .mobile-hero-location {
+    display: none !important;
+  }
+
+  /* Reserve a dedicated row for the meal selector so it cannot cover either CTA.
+     Extra hero height is mobile-only; desktop geometry is untouched. */
+  .hero {
+    min-height: 680px;
+    height: auto;
+    padding-top: 72px;
+    padding-bottom: 92px;
+    box-sizing: border-box;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    padding-top: 100px !important;
+    padding-bottom: 0 !important;
+  }
+
+  .hero .hero-meal-nav {
+    position: absolute !important;
+    left: 4% !important;
+    right: 4% !important;
+    bottom: 16px !important;
+    top: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    transform: none !important;
+    z-index: 5 !important;
+    box-sizing: border-box;
+  }
+
+  .hero-meal-item {
+    flex: 0 0 33.333%;
+    min-width: 108px;
+  }
+}
+
+@media (max-width: 390px) {
+  .site-header .header-location {
+    left: 128px;
+    right: 44px;
+    font-size: 7.8px;
+  }
+
+  .site-header .brand {
+    width: 116px;
+  }
+
+  .site-header .menu-toggle {
+    width: 36px;
+  }
+
+  .hero {
+    min-height: 700px;
+    padding-bottom: 94px;
+  }
+
+  .hero-content {
+    padding-top: 94px !important;
+  }
+
+  .hero-meal-item {
+    flex-basis: 108px;
+  }
+}
+
+
+/* MOBILE-ONLY: fit all four meal capsules in the viewport */
+@media (max-width: 760px) {
+  .hero .hero-meal-nav {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 0 !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+  }
+
+  .hero .hero-meal-item {
+    flex: initial !important;
+    min-width: 0 !important;
+    width: auto !important;
+    padding: 9px 3px !important;
+    gap: 4px !important;
+    justify-content: center !important;
+  }
+
+  .hero .hero-meal-item i {
+    font-size: 16px !important;
+    margin-right: 0 !important;
+  }
+
+  .hero .hero-meal-item div {
+    min-width: 0 !important;
+  }
+
+  .hero .hero-meal-item b {
+    font-size: 11px !important;
+  }
+
+  .hero .hero-meal-item span {
+    font-size: 7px !important;
+    letter-spacing: .06em !important;
+    white-space: nowrap !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .hero .hero-meal-item {
+    padding: 8px 1px !important;
+    gap: 2px !important;
+  }
+
+  .hero .hero-meal-item i {
+    font-size: 14px !important;
+  }
+
+  .hero .hero-meal-item b {
+    font-size: 10px !important;
+  }
+
+  .hero .hero-meal-item span {
+    font-size: 6.5px !important;
+    letter-spacing: .03em !important;
+  }
+}
+
+
+/* MOBILE-ONLY HERO TEXT CLARITY PATCH.
+   Desktop typography, overlays and positioning intentionally unchanged. */
+@media (max-width: 760px) {
+  .hero .hero-content {
+    text-shadow: none !important;
+  }
+
+  .hero .eyebrow,
+  .hero .hero-eyebrow {
+    color: #263c2d !important;
+    opacity: 1 !important;
+    text-shadow: 0 1px 0 rgba(255,255,255,.5) !important;
+    font-weight: 800 !important;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .hero h1,
+  .hero .hero-title {
+    color: #101a12 !important;
+    opacity: 1 !important;
+    text-shadow: 0 1px 0 rgba(255,255,255,.3) !important;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .hero h1 em,
+  .hero h1 i,
+  .hero .hero-title em,
+  .hero .hero-title i {
+    color: #355b2c !important;
+    opacity: 1 !important;
+    text-shadow: 0 1px 0 rgba(255,255,255,.35) !important;
+  }
+
+  .hero .hero-copy,
+  .hero .hero-description,
+  .hero .hero-content > p:not(.eyebrow):not(.hero-eyebrow) {
+    color: #26352b !important;
+    opacity: 1 !important;
+    text-shadow: 0 1px 0 rgba(255,255,255,.6) !important;
+    font-weight: 500 !important;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* A restrained cream veil improves contrast over the bright food photograph
+     without replacing the image or changing desktop treatment. */
+  .hero::before {
+    background: linear-gradient(
+      90deg,
+      rgba(250,247,237,.28) 0%,
+      rgba(250,247,237,.18) 58%,
+      rgba(250,247,237,.06) 100%
+    ) !important;
+  }
+}
+
+
+/* BITEWINK PROMISE — blend near-white icon artwork into the section background */
+.promise .promise-card img {
+  background: transparent !important;
+  mix-blend-mode: multiply;
+}
+
+
+/* Promise icon backgrounds are now transparent PNGs.
+   Apply consistently on desktop and mobile; no layout changes. */
+.promise .promise-card img {
+  background: transparent !important;
+  mix-blend-mode: normal !important;
+}
