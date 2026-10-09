@@ -1,5 +1,5 @@
 // BITEWINK validation capture. Paste your deployed Google Apps Script URL below.
-const BITEWINK_SHEETS_ENDPOINT = 'https://script.google.com/macros/s/AKfycby_nnldtCM7t6b9wVyZNnpIeSPvtNIdLn4KYn19TmCzT-o_zjPVJ71PNxweipv6q-RQ/exec';
+const BITEWINK_SHEETS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzVt9GHZfYUb9AJGADL13VboWLVL6op1wKheTDRIZ9-EuUaiMsje4XSO0MwaVV4-z4s/exec';
 const state = {need:'',frequency:'',budget:'',products:[]};
 const sessionId = getOrCreateSessionId();
 let surveySendTimer = null;
