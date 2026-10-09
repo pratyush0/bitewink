@@ -118,14 +118,20 @@ form.addEventListener('submit',async event=>{
   const submitButton=form.querySelector('[type="submit"]');
   const status=document.getElementById('form-status');
   const data=Object.fromEntries(new FormData(form).entries());
+  // Read the live checkbox property directly. Mobile browsers can expose stale or
+  // missing checkbox values through serialized form data in some interaction flows.
+  const consentControl = form.elements.namedItem('whatsappUpdatesConsent');
+  const whatsappConsentChecked = Boolean(
+    consentControl && consentControl.type === 'checkbox' && consentControl.checked === true
+  );
   const record={
     action:'founding', registrationId:(crypto.randomUUID ? crypto.randomUUID() : `reg-${Date.now()}-${Math.random().toString(36).slice(2)}`),
     sessionId, name:String(data.name||'').trim(), phone:String(data.phone||'').trim(),
     area:String(data.area||'').trim(), meal:String(data.meal||''),
     frequency:String(data.frequency||''), budget:String(data.budget||''),
     preferredNeed:state.need, selectedProducts:[...state.products],
-    whatsappUpdatesConsent:data.whatsappUpdatesConsent === 'yes',
-    consentRecordedAt:data.whatsappUpdatesConsent === 'yes' ? new Date().toISOString() : '',
+    whatsappUpdatesConsent:whatsappConsentChecked,
+    consentRecordedAt:whatsappConsentChecked ? new Date().toISOString() : '',
     pageUrl:location.href, submittedAt:new Date().toISOString()
   };
   submitButton.disabled=true;
