@@ -35,10 +35,30 @@ form.addEventListener('submit',event=>{
 
 const menuToggle=document.querySelector('.menu-toggle');
 const nav=document.querySelector('.desktop-nav');
+const mobileMenu=document.querySelector('#mobile-menu');
+
+function setMobileMenu(open){
+  if(!mobileMenu || !menuToggle) return;
+  menuToggle.setAttribute('aria-expanded',String(open));
+  mobileMenu.classList.toggle('mobile-open',open);
+  mobileMenu.setAttribute('aria-hidden',String(!open));
+  menuToggle.textContent=open?'×':'☰';
+}
+
 menuToggle?.addEventListener('click',()=>{
   const open=menuToggle.getAttribute('aria-expanded')==='true';
-  menuToggle.setAttribute('aria-expanded',String(!open));
-  nav.classList.toggle('mobile-open',!open);
+  setMobileMenu(!open);
+});
+
+mobileMenu?.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{
+  setMobileMenu(false);
+}));
+
+document.addEventListener('click',(event)=>{
+  if(!mobileMenu || !menuToggle) return;
+  if(!mobileMenu.contains(event.target) && !menuToggle.contains(event.target)){
+    setMobileMenu(false);
+  }
 });
 
 document.querySelectorAll('a[href^="#"]').forEach(a=>a.addEventListener('click',()=>{

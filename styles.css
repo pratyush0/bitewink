@@ -361,3 +361,203 @@
     background-position: center center;
   }
 }
+
+
+/* =========================================================
+   MOBILE HEADER — responsive navigation + location
+   ========================================================= */
+.mobile-menu {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .site-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    height: 72px;
+    background: #fff !important;
+    box-shadow: 0 1px 0 rgba(20,35,24,.08);
+  }
+
+  .site-header .brand {
+    width: 126px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .site-header .menu-toggle {
+    display: grid !important;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border: 0;
+    background: transparent;
+    color: #12331e;
+    font-size: 27px;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 103;
+  }
+
+  /* The old desktop location is intentionally hidden from the tight header.
+     It is shown inside the mobile navigation panel instead. */
+  .site-header .header-location {
+    display: none !important;
+  }
+
+  .site-header .desktop-nav,
+  .site-header .header-cta {
+    display: none !important;
+  }
+
+  .mobile-menu {
+    position: fixed;
+    display: block;
+    top: 72px;
+    left: 0;
+    right: 0;
+    z-index: 99;
+    background: rgba(255,255,255,.985);
+    border-top: 1px solid #e7ebe3;
+    box-shadow: 0 18px 35px rgba(18,39,24,.12);
+    transform: translateY(-14px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease, visibility .2s ease;
+  }
+
+  .mobile-menu.mobile-open {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .mobile-menu-inner {
+    width: min(100% - 32px, 520px);
+    margin: 0 auto;
+    padding: 12px 0 18px;
+    display: grid;
+    gap: 2px;
+  }
+
+  .mobile-menu-inner > a:not(.mobile-menu-cta) {
+    color: #102116;
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 650;
+    padding: 12px 4px;
+    border-bottom: 1px solid #edf0ea;
+  }
+
+  .mobile-menu-location {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 4px 10px;
+    color: #526058;
+    font-size: 12px;
+  }
+
+  .mobile-menu-location span:first-child {
+    color: #d96c2f;
+    font-size: 20px;
+  }
+
+  .mobile-menu-location strong {
+    color: #102116;
+  }
+
+  .mobile-menu-cta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 5px;
+    padding: 13px 16px;
+    border-radius: 999px;
+    background: #b8f24b;
+    color: #102116;
+    text-decoration: none;
+    font-weight: 800;
+  }
+
+  .mobile-menu-cta span {
+    font-size: 19px;
+  }
+
+  /* Give the hero enough top clearance for the fixed-height mobile header. */
+  .hero {
+    padding-top: 72px;
+  }
+
+  .hero-content {
+    padding-top: 112px !important;
+  }
+
+  /* The unified meal selector remains anchored at the hero bottom.
+     Its existing responsive styling is preserved. */
+  .hero .hero-meal-nav {
+    bottom: 16px !important;
+  }
+}
+
+@media (min-width: 761px) {
+  .mobile-menu {
+    display: none !important;
+  }
+}
+
+
+/* Mobile hero location — visible in the hero, matching the desktop information hierarchy */
+.mobile-hero-location {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .mobile-hero-location {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 12px;
+    color: #173b25;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .mobile-hero-location svg {
+    width: 17px;
+    height: 17px;
+    fill: none;
+    stroke: #d96c2f;
+    stroke-width: 2;
+  }
+
+  .mobile-hero-location strong {
+    color: #102116;
+    font-weight: 800;
+  }
+
+  /* Keep the selector fully usable on narrow screens: all four items remain
+     in one row and can be horizontally scrolled rather than clipped. */
+  .hero-meal-nav {
+    display: flex !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .hero-meal-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hero-meal-item {
+    flex: 0 0 118px;
+  }
+}
