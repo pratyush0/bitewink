@@ -1,18 +1,12 @@
-# BITEWINK Validation MVP — V1
+# BITEWINK validation MVP
 
-This is the validation-focused BITEWINK MVP. It is intentionally not an operational ordering site.
+This package includes the asset-optimized static website plus Google Sheets response capture integration.
 
-## Product purpose
-Validate:
-- strongest meal use case
-- meal concepts people would try
-- meal moment fit
-- expected frequency
-- willingness to pay
-- early interest in a Bhubaneswar launch
+## Before deployment
 
-## Important
-Ordering and payment are not activated. The Founding 100 form stores submitted test data in browser localStorage only until a real backend/lead destination is connected.
+1. Follow `GOOGLE-SHEETS-SETUP.md` to create and deploy the Google Apps Script endpoint.
+2. Put the deployed `/exec` URL in `BITEWINK_SHEETS_ENDPOINT` at the top of `script.js`.
+3. Deploy the complete package to GitHub Pages.
+4. Run the survey and Founding 100 test steps in the setup guide and verify rows in the spreadsheet.
 
-## Assets
-The site uses the frozen BITEWINK asset manifest. Simple UI symbols are HTML/emoji/inline controls rather than additional raster assets.
+The website does not activate food ordering or payment.
