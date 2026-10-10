@@ -124,11 +124,11 @@ async function sha256Hex(value){
   return [...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
-function jsonpRequest(params, label){
+function jsonpRequest(params, label, timeoutMs=5000){
   return new Promise((resolve,reject)=>{
     const callbackName=`bw${label}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const script=document.createElement('script');
-    const timeout=setTimeout(()=>finish(new Error(`${label} request timed out.`)),10000);
+    const timeout=setTimeout(()=>finish(new Error(`${label} request timed out.`)),timeoutMs);
     function cleanup(){ clearTimeout(timeout); delete window[callbackName]; script.remove(); }
     function finish(error,result){ cleanup(); error?reject(error):resolve(result); }
     window[callbackName]=(result)=>finish(null,result);
@@ -146,12 +146,16 @@ async function checkExistingPhone(phoneHash){
 }
 
 async function confirmRegistrationSaved(registrationId){
-  // no-cors POST responses are unreadable; verify the exact registration ID through JSONP.
-  const delays=[500,1000,1800,2500];
-  for(let i=0;i<delays.length;i++){
-    await new Promise(resolve=>setTimeout(resolve,delays[i]));
-    const result=await jsonpRequest({action:'checkRegistration',registrationId},'RegistrationCheck');
-    if(result && result.ok === true && result.exists === true) return true;
+  // no-cors POST responses are unreadable; check immediately, then retry briefly if the sheet write is not visible yet.
+  const retryDelays=[0,250,600,1200];
+  for(let i=0;i<retryDelays.length;i++){
+    if(retryDelays[i]) await new Promise(resolve=>setTimeout(resolve,retryDelays[i]));
+    try {
+      const result=await jsonpRequest({action:'checkRegistration',registrationId},'RegistrationCheck',2500);
+      if(result && result.ok === true && result.exists === true) return true;
+    } catch (error) {
+      console.warn('BITEWINK registration confirmation attempt failed.', error);
+    }
   }
   return false;
 }
@@ -220,7 +224,11 @@ form.addEventListener('submit',async event=>{
     form.reset();
     status.textContent='Thank you — your registration has been saved. We’ll keep you posted as we shape the launch.';
   }catch(error){
-    status.textContent='We couldn’t verify or save your response just now. Please try again in a moment.';
+    if(String(error?.message || '').includes('PhoneCheck')) {
+      status.textContent='We couldn’t check this phone number just now. Please check your connection and try again.';
+    } else {
+      status.textContent='We couldn’t send your response just now. Please try again in a moment.';
+    }
     console.error('BITEWINK registration capture failed.',error);
   }finally{
     submitButton.disabled=false;

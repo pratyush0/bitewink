@@ -67,13 +67,27 @@ function doGet(e) {
 }
 
 function phoneHashExists_(phoneHash) {
+  // Cache both positive and negative checks briefly to avoid repeatedly hashing every row.
+  const cache = CacheService.getScriptCache();
+  const key = 'bw_phone_' + phoneHash;
+  const cached = cache.get(key);
+  if (cached === '1') return true;
+  if (cached === '0') return false;
+
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAMES.founding);
-  if (!sheet || sheet.getLastRow() < 2) return false;
+  if (!sheet || sheet.getLastRow() < 2) {
+    cache.put(key, '0', 30);
+    return false;
+  }
   const phones = sheet.getRange(2, 4, sheet.getLastRow() - 1, 1).getDisplayValues();
   for (let i = 0; i < phones.length; i++) {
     const normalized = normalizeIndianPhone_(phones[i][0]);
-    if (normalized && sha256Hex_(normalized) === phoneHash) return true;
+    if (normalized && sha256Hex_(normalized) === phoneHash) {
+      cache.put(key, '1', 600);
+      return true;
+    }
   }
+  cache.put(key, '0', 30);
   return false;
 }
 
@@ -225,6 +239,8 @@ function appendFounding_(ss, p) {
     p.whatsappUpdatesConsent === true ? 'Yes' : 'No',
     p.whatsappUpdatesConsent === true ? submittedAt : ''
   ]);
+  // Make the just-saved phone immediately visible to the duplicate-check endpoint.
+  CacheService.getScriptCache().put('bw_phone_' + sha256Hex_(normalizedPhone), '1', 600);
 }
 
 function normalizeIndianPhone_(value) {
