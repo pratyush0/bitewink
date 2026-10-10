@@ -21,9 +21,15 @@ function doPost(e) {
     const raw = (e && e.postData && e.postData.contents) || '';
     if (!raw || raw.length > 10000) throw new Error('Invalid or oversized payload');
     const payload = JSON.parse(raw);
+    // Honeypot: silently accept but never store submissions that fill the hidden field.
+    if (payload && typeof payload === 'object' && !Array.isArray(payload) &&
+        String(payload.website || '').trim() !== '') {
+      return json_({ ok: true });
+    }
     validatePayload_(payload);
     lock.waitLock(10000);
     locked = true;
+    enforceSessionRateLimit_(payload);
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     if (payload.action === 'survey') upsertSurvey_(ss, payload);
     else appendFounding_(ss, payload);
@@ -87,6 +93,24 @@ function sha256Hex_(value) {
 function jsonp_(callback, obj) {
   return ContentService.createTextOutput(callback + '(' + JSON.stringify(obj) + ');')
     .setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
+
+
+// Lightweight throttling per action + session. This is a deterrent, not a global/IP limit.
+// Survey allows more edits because it intentionally updates one row per session.
+function enforceSessionRateLimit_(payload) {
+  const limits = { survey: 30, founding: 5 };
+  const action = payload.action;
+  const maxRequests = limits[action];
+  if (!maxRequests) throw new Error('Invalid action');
+  const sessionHash = sha256Hex_(String(payload.sessionId)).slice(0, 32);
+  const cache = CacheService.getScriptCache();
+  const key = 'bw_rate_' + action + '_' + sessionHash;
+  const current = Number(cache.get(key) || '0');
+  if (current >= maxRequests) {
+    throw new Error('Too many submissions. Please wait 10 minutes and try again.');
+  }
+  cache.put(key, String(current + 1), 600);
 }
 
 function validatePayload_(p) {

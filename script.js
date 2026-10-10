@@ -157,11 +157,26 @@ async function confirmRegistrationSaved(registrationId){
 }
 
 const form=document.getElementById('founding-form');
+// Honeypot field: positioned off-screen so real visitors don't see or tab into it.
+let honeypot=form.querySelector('[name="website"]');
+if(form && !honeypot){
+  honeypot=document.createElement('input');
+  honeypot.type='text';
+  honeypot.name='website';
+  honeypot.autocomplete='off';
+  honeypot.tabIndex=-1;
+  honeypot.setAttribute('aria-hidden','true');
+  honeypot.setAttribute('aria-label','Leave this field empty');
+  Object.assign(honeypot.style,{position:'absolute',left:'-10000px',top:'auto',width:'1px',height:'1px',overflow:'hidden'});
+  form.appendChild(honeypot);
+}
 form.addEventListener('submit',async event=>{
   event.preventDefault();
   const submitButton=form.querySelector('[type="submit"]');
   const status=document.getElementById('form-status');
   const data=Object.fromEntries(new FormData(form).entries());
+  // Don't send honeypot-filled submissions from the browser. The server also checks it.
+  if(String(data.website || '').trim() !== ''){ status.textContent='Please try submitting the form again.'; return; }
   const consentControl=form.elements.namedItem('whatsappUpdatesConsent');
   const whatsappConsentChecked=Boolean(consentControl && consentControl.type==='checkbox' && consentControl.checked===true);
   const name=validateName(data.name);
@@ -187,7 +202,7 @@ form.addEventListener('submit',async event=>{
     preferredNeed:state.need, selectedProducts:[...state.products],
     whatsappUpdatesConsent:whatsappConsentChecked,
     consentRecordedAt:whatsappConsentChecked ? submittedAt : '',
-    pageUrl:validatePageUrl(location.href), submittedAt
+    pageUrl:validatePageUrl(location.href), submittedAt, website:String(data.website || '')
   };
   submitButton.disabled=true;
   status.textContent='Checking your details…';
