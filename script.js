@@ -1,9 +1,17 @@
-// BITEWINK validation capture. Paste your deployed Google Apps Script URL below.
+// BITEWINK validation capture. Keep this endpoint aligned with the deployed Apps Script web app.
 const BITEWINK_SHEETS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzVt9GHZfYUb9AJGADL13VboWLVL6op1wKheTDRIZ9-EuUaiMsje4XSO0MwaVV4-z4s/exec';
 const state = {need:'',frequency:'',budget:'',products:[]};
 const sessionId = getOrCreateSessionId();
 let surveySendTimer = null;
 let lastSurveySignature = '';
+
+const BITEWINK_OPTIONS = {
+  need: ['Breakfast','Lunch','Dinner','Snacks'],
+  frequency: ['Every day','3–5 times a week','1–2 times a week','Occasionally'],
+  budget: ['₹149–199','₹200–249','₹250–299','₹300–349','₹350+'],
+  meal: ['Breakfast','Lunch','Dinner','Snacks'],
+  products: ['Protein Oat Bowl','Power Lunch Bowl','Balanced Dinner','Smart Snack']
+};
 
 function getOrCreateSessionId(){
   const key='bitewink-validation-session-id';
@@ -19,11 +27,13 @@ function sendToSheets(payload){
     console.warn('BITEWINK Google Sheets endpoint is not configured. No centralized response was sent.');
     return Promise.reject(new Error('Response capture is not configured yet.'));
   }
+  const body = JSON.stringify(payload);
+  if (body.length > 10000) return Promise.reject(new Error('Submission is too large.'));
   // Apps Script web apps commonly require a simple request to avoid browser CORS preflight.
+  // This response is opaque; founding registrations are confirmed separately by registrationId.
   return fetch(BITEWINK_SHEETS_ENDPOINT, {
     method:'POST', mode:'no-cors', redirect:'follow', keepalive:true,
-    headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body:JSON.stringify(payload)
+    headers:{'Content-Type':'text/plain;charset=utf-8'}, body
   });
 }
 
@@ -58,6 +68,7 @@ function queueSurveyCapture(){
 function bindChoiceGroup(group){
   const buttons=[...document.querySelectorAll(`[data-group="${group}"] .choice-card, [data-group="${group}"] .option`)];
   buttons.forEach(btn=>btn.addEventListener('click',()=>{
+    if (!BITEWINK_OPTIONS[group]?.includes(btn.dataset.value)) return;
     buttons.forEach(b=>b.classList.remove('selected'));
     btn.classList.add('selected');
     state[group]=btn.dataset.value;
@@ -70,21 +81,40 @@ function bindChoiceGroup(group){
 
 document.querySelectorAll('.try-btn').forEach(btn=>btn.addEventListener('click',()=>{
   const product=btn.dataset.product;
+  if(!BITEWINK_OPTIONS.products.includes(product)) return;
   if(!state.products.includes(product)) state.products.push(product);
   const feedback=document.getElementById('menu-feedback');
-  feedback.textContent=`✓ ${product} added to your “I'd try this” list.`;
+  if(feedback) feedback.textContent=`✓ ${product} added to your “I'd try this” list.`;
   btn.textContent='✓ I’d try this';
   btn.classList.add('selected');
   queueSurveyCapture();
 }));
 
-// Check the phone number against existing Founding 100 registrations before POSTing.
-// The browser sends only a SHA-256 hash in the JSONP URL, not the phone number itself.
-function normalizePhoneForCheck(value){
-  let digits=String(value||'').replace(/\D/g,'');
-  if(digits.length===12 && digits.startsWith('91')) digits=digits.slice(2);
-  if(digits.length===11 && digits.startsWith('0')) digits=digits.slice(1);
+function normalizeIndianPhone(value){
+  const raw=String(value ?? '').trim();
+  if (!raw || raw.length > 25 || !/^[+()\d\s-]+$/.test(raw)) return '';
+  if ((raw.match(/\+/g) || []).length > 1 || (raw.includes('+') && !raw.startsWith('+'))) return '';
+  const opens=(raw.match(/\(/g) || []).length;
+  const closes=(raw.match(/\)/g) || []).length;
+  if (opens !== closes || opens > 2 || /\(\s*\)/.test(raw)) return '';
+  let digits=raw.replace(/\D/g,'');
+  if (digits.length===12 && digits.startsWith('91')) digits=digits.slice(2);
+  else if (digits.length===11 && digits.startsWith('0')) digits=digits.slice(1);
+  if (!/^[6-9]\d{9}$/.test(digits)) return '';
   return digits;
+}
+
+function validateName(value){
+  const v=String(value ?? '').trim();
+  return v.length >= 2 && v.length <= 80 && /[\p{L}\p{M}]/u.test(v) && /^[\p{L}\p{M} .'-]+$/u.test(v) ? v : '';
+}
+function validateArea(value){
+  const v=String(value ?? '').trim();
+  return v.length >= 2 && v.length <= 100 && /[\p{L}\p{M}\d]/u.test(v) && /^[\p{L}\p{M}\d .,#/()-]+$/u.test(v) ? v : '';
+}
+function validatePageUrl(value){
+  const v=String(value ?? '');
+  return v.length <= 1000 && /^https?:\/\//i.test(v) ? v : '';
 }
 
 async function sha256Hex(value){
@@ -94,22 +124,36 @@ async function sha256Hex(value){
   return [...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
-function checkExistingPhone(phoneHash){
+function jsonpRequest(params, label){
   return new Promise((resolve,reject)=>{
-    const callbackName=`bwPhoneCheck_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const callbackName=`bw${label}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const script=document.createElement('script');
-    const timeout=setTimeout(()=>finish(new Error('Phone check timed out. Please try again.')),10000);
-    function cleanup(){
-      clearTimeout(timeout);
-      delete window[callbackName];
-      script.remove();
-    }
-    function finish(error,result){cleanup(); error?reject(error):resolve(result);}
-    window[callbackName]=(result)=>finish(null,!!(result && result.ok && result.exists));
-    script.onerror=()=>finish(new Error('Could not check this phone number. Please try again.'));
-    script.src=`${BITEWINK_SHEETS_ENDPOINT}?action=checkPhone&phoneHash=${encodeURIComponent(phoneHash)}&callback=${encodeURIComponent(callbackName)}&t=${Date.now()}`;
+    const timeout=setTimeout(()=>finish(new Error(`${label} request timed out.`)),10000);
+    function cleanup(){ clearTimeout(timeout); delete window[callbackName]; script.remove(); }
+    function finish(error,result){ cleanup(); error?reject(error):resolve(result); }
+    window[callbackName]=(result)=>finish(null,result);
+    script.onerror=()=>finish(new Error(`${label} request failed.`));
+    const query=new URLSearchParams({...params,callback:callbackName,t:String(Date.now())});
+    script.src=`${BITEWINK_SHEETS_ENDPOINT}?${query.toString()}`;
     document.head.appendChild(script);
   });
+}
+
+async function checkExistingPhone(phoneHash){
+  const result=await jsonpRequest({action:'checkPhone',phoneHash},'PhoneCheck');
+  if(!result || result.ok !== true) throw new Error('Phone check could not be completed.');
+  return result.exists === true;
+}
+
+async function confirmRegistrationSaved(registrationId){
+  // no-cors POST responses are unreadable; verify the exact registration ID through JSONP.
+  const delays=[500,1000,1800,2500];
+  for(let i=0;i<delays.length;i++){
+    await new Promise(resolve=>setTimeout(resolve,delays[i]));
+    const result=await jsonpRequest({action:'checkRegistration',registrationId},'RegistrationCheck');
+    if(result && result.ok === true && result.exists === true) return true;
+  }
+  return false;
 }
 
 const form=document.getElementById('founding-form');
@@ -118,37 +162,50 @@ form.addEventListener('submit',async event=>{
   const submitButton=form.querySelector('[type="submit"]');
   const status=document.getElementById('form-status');
   const data=Object.fromEntries(new FormData(form).entries());
-  // Read the live checkbox property directly. Mobile browsers can expose stale or
-  // missing checkbox values through serialized form data in some interaction flows.
-  const consentControl = form.elements.namedItem('whatsappUpdatesConsent');
-  const whatsappConsentChecked = Boolean(
-    consentControl && consentControl.type === 'checkbox' && consentControl.checked === true
-  );
+  const consentControl=form.elements.namedItem('whatsappUpdatesConsent');
+  const whatsappConsentChecked=Boolean(consentControl && consentControl.type==='checkbox' && consentControl.checked===true);
+  const name=validateName(data.name);
+  const phone=normalizeIndianPhone(data.phone);
+  const area=validateArea(data.area);
+  const meal=String(data.meal||'').trim();
+  const frequency=String(data.frequency||'').trim();
+  const budget=String(data.budget||'').trim();
+
+  if(!name){ status.textContent='Please enter a valid name (2–80 characters; letters, spaces, apostrophes, periods and hyphens).'; form.elements.namedItem('name')?.focus(); return; }
+  if(!phone){ status.textContent='Please enter a valid 10-digit Indian mobile number, optionally with +91.'; form.elements.namedItem('phone')?.focus(); return; }
+  if(!area){ status.textContent='Please enter a valid area or PIN code (2–100 characters).'; form.elements.namedItem('area')?.focus(); return; }
+  if(!BITEWINK_OPTIONS.meal.includes(meal)){ status.textContent='Please select a valid meal preference.'; return; }
+  if(!BITEWINK_OPTIONS.frequency.includes(frequency)){ status.textContent='Please select a valid ordering frequency.'; return; }
+  if(!BITEWINK_OPTIONS.budget.includes(budget)){ status.textContent='Please select a valid budget.'; return; }
+  if(state.need && !BITEWINK_OPTIONS.need.includes(state.need)){ status.textContent='Please refresh the page and try again.'; return; }
+  if(state.products.length > 4 || state.products.some(p=>!BITEWINK_OPTIONS.products.includes(p))){ status.textContent='Please refresh the page and try again.'; return; }
+
+  const registrationId=(crypto.randomUUID ? crypto.randomUUID() : `reg-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const submittedAt=new Date().toISOString();
   const record={
-    action:'founding', registrationId:(crypto.randomUUID ? crypto.randomUUID() : `reg-${Date.now()}-${Math.random().toString(36).slice(2)}`),
-    sessionId, name:String(data.name||'').trim(), phone:String(data.phone||'').trim(),
-    area:String(data.area||'').trim(), meal:String(data.meal||''),
-    frequency:String(data.frequency||''), budget:String(data.budget||''),
+    action:'founding', registrationId, sessionId, name, phone, area, meal, frequency, budget,
     preferredNeed:state.need, selectedProducts:[...state.products],
     whatsappUpdatesConsent:whatsappConsentChecked,
-    consentRecordedAt:whatsappConsentChecked ? new Date().toISOString() : '',
-    pageUrl:location.href, submittedAt:new Date().toISOString()
+    consentRecordedAt:whatsappConsentChecked ? submittedAt : '',
+    pageUrl:validatePageUrl(location.href), submittedAt
   };
   submitButton.disabled=true;
-  status.textContent='Sending your response…';
+  status.textContent='Checking your details…';
   try{
-    const normalizedPhone=normalizePhoneForCheck(record.phone);
-    const phoneHash=await sha256Hex(normalizedPhone);
+    const phoneHash=await sha256Hex(phone);
     const alreadyRegistered=await checkExistingPhone(phoneHash);
-    if(alreadyRegistered){
-      status.textContent='This phone number is already registered for BITEWINK Founding 100.';
+    if(alreadyRegistered){ status.textContent='This phone number is already registered for BITEWINK Founding 100.'; return; }
+    status.textContent='Sending your response…';
+    await sendToSheets(record);
+    const saved=await confirmRegistrationSaved(registrationId);
+    if(!saved){
+      status.textContent='We couldn’t confirm that your registration was saved. Please wait a moment and check before trying again.';
       return;
     }
-    await sendToSheets(record);
     form.reset();
-    status.textContent='Thank you — your response has been sent. We’ll keep you posted as we shape the launch.';
+    status.textContent='Thank you — your registration has been saved. We’ll keep you posted as we shape the launch.';
   }catch(error){
-    status.textContent='We couldn’t verify or send your response just now. Please try again in a moment.';
+    status.textContent='We couldn’t verify or save your response just now. Please try again in a moment.';
     console.error('BITEWINK registration capture failed.',error);
   }finally{
     submitButton.disabled=false;
